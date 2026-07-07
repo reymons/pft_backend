@@ -1,0 +1,23 @@
+name: pft_backend_test
+
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: db
+    hostname: db
+    networks:
+      - main
+    ports:
+      - ${DB_PORT}:${DB_PORT}
+    environment:
+      - PGHOST=db
+      - PGPORT=${DB_PORT}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - PGDATA=/var/lib/postgresql/data/app
+    restart: always
+
+networks:
+  main:
+    driver: bridge
