@@ -4,6 +4,8 @@ import { DBModule } from "./db/db.module";
 import { JwtModule } from "./jwt/jwt.module";
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
+import { CategoriesModule } from "./categories/categories.module";
+import { BudgetsModule } from "./budgets/budgets.module";
 
 @Module({
     imports: [
@@ -15,6 +17,8 @@ import { UsersModule } from "./users/users.module";
         JwtModule,
         AuthModule,
         UsersModule,
+        CategoriesModule,
+        BudgetsModule,
     ],
 })
 export class AppModule {}

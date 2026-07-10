@@ -1,5 +1,9 @@
-import type { IDatabase, ITask } from "pg-promise";
+import type { IDatabase, IHelpers, ITask } from "pg-promise";
 
 export type DBClient = IDatabase<0> | ITask<0>;
 
 export const DB_CLIENT = "POSTGRES_DB";
+
+export const DB_HELPERS = "PGP_HELPERS";
+
+export type DBHelpers = IHelpers;

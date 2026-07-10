@@ -4,7 +4,7 @@ import { App } from "supertest/types";
 import { AppModule } from "@/app.module";
 import { authRequest, getTestUser } from "../helpers/auth";
 
-describe("Auth API", () => {
+describe("Users API", () => {
     let app: INestApplication<App>;
 
     beforeAll(async () => {

@@ -2,13 +2,15 @@ import pgp from "pg-promise";
 import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DBService } from "./db.service";
-import { DB_CLIENT, DBClient } from "./db.client";
+import { DB_CLIENT, DB_HELPERS, DBClient, DBHelpers } from "./db.client";
+import { Transactor } from "./db.transactor";
 
 const db = pgp();
 
 @Global()
 @Module({
     providers: [
+        Transactor,
         DBService,
         {
             provide: DB_CLIENT,
@@ -23,7 +25,11 @@ const db = pgp();
                 });
             },
         },
+        {
+            provide: DB_HELPERS,
+            useFactory: (): DBHelpers => db.helpers,
+        },
     ],
-    exports: [DB_CLIENT],
+    exports: [DB_CLIENT, DB_HELPERS, Transactor],
 })
 export class DBModule {}

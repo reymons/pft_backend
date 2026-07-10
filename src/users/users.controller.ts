@@ -2,7 +2,7 @@ import { Auth } from "@/auth/auth.guard";
 import { Controller, Get, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
 import { type FastifyRequest } from "fastify";
-import { UserRes } from "./dto/user";
+import { UserRes } from "./dto/controller/user";
 import { UsersRepo } from "./users.repo";
 
 @Controller("users")

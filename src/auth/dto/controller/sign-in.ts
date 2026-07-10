@@ -1,4 +1,4 @@
-import { UserRes } from "@/users/dto/user";
+import { UserRes } from "@/users/dto/controller/user";
 import { UserModel } from "@/users/users.model";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString } from "class-validator";
