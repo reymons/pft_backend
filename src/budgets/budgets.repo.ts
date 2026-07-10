@@ -1,7 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DB_CLIENT, DB_HELPERS, type DBHelpers, type DBClient } from "@/db/db.client";
 import { BudgetModel, BudgetPeriod } from "./budgets.model";
-import { BudgetEntity } from "./budgets.entity";
+import { BudgetEntity, BudgetWithCategoriesEntity } from "./budgets.entity";
+import { PostgresInterval } from "@/db/db.types";
 
 @Injectable()
 export class BudgetsRepoFactory {
@@ -14,6 +15,19 @@ export class BudgetsRepoFactory {
 
 @Injectable()
 export class BudgetsRepo {
+    private static readonly getAllBudgetsSQL = `
+        SELECT
+            b.id, b.user_id, b.amount, b.period,
+            COALESCE(
+                json_agg(bc.category_id) FILTER (WHERE bc.category_id IS NOT NULL),
+                '[]'
+            ) as category_ids
+        FROM budgets AS b
+        LEFT JOIN budget_categories AS bc ON b.id = bc.budget_id
+        WHERE b.user_id = $1
+        GROUP BY b.id
+    `;
+
     private static readonly sqlPeriod: Record<BudgetPeriod, string> = {
         weekly: "1 week",
         monthly: "1 month",
@@ -25,25 +39,42 @@ export class BudgetsRepo {
         @Inject(DB_HELPERS) private readonly helpers: DBHelpers,
     ) {}
 
-    private toModel(ent: BudgetEntity): BudgetModel {
+    private sqlPeriodToModelPeriod(p: PostgresInterval): BudgetPeriod {
+        if (p.days && p.days === 7) {
+            return BudgetPeriod.Weekly;
+        }
+        if (p.months && p.months === 1) {
+            return BudgetPeriod.Monthly;
+        }
+        if (p.years && p.years === 1) {
+            return BudgetPeriod.Yearly;
+        }
+        throw new Error("Unknown budget period");
+    }
+
+    private budgetToModel(ent: BudgetEntity): BudgetModel {
         const m = new BudgetModel();
         m.id = ent.id;
-        m.userId = ent.userId;
+        m.userId = ent.user_id;
         m.amount = parseFloat(ent.amount);
         m.categoryIds = [];
-
-        const p = ent.period;
-        if (p.days && p.days === 7) {
-            m.period = BudgetPeriod.Weekly;
-        } else if (p.months && p.months === 1) {
-            m.period = BudgetPeriod.Monthly;
-        } else if (p.years && p.years === 1) {
-            m.period = BudgetPeriod.Yearly;
-        } else {
-            throw new Error("Unknown budget period");
-        }
-
+        m.period = this.sqlPeriodToModelPeriod(ent.period);
         return m;
+    }
+
+    private budgetWithCatsToModel(ent: BudgetWithCategoriesEntity): BudgetModel {
+        const m = new BudgetModel();
+        m.id = ent.id;
+        m.userId = ent.user_id;
+        m.amount = parseFloat(ent.amount);
+        m.period = this.sqlPeriodToModelPeriod(ent.period);
+        m.categoryIds = [...ent.category_ids];
+        return m;
+    }
+
+    async getAllByUserId(userId: number): Promise<BudgetModel[]> {
+        const rows = await this.db.many<BudgetWithCategoriesEntity>(BudgetsRepo.getAllBudgetsSQL, userId);
+        return rows.map((r) => this.budgetWithCatsToModel(r));
     }
 
     async save(userId: number, amount: number, period: BudgetPeriod, categoryIds: number[] = []): Promise<BudgetModel> {
@@ -51,7 +82,7 @@ export class BudgetsRepo {
             "INSERT INTO budgets(user_id, amount, period) VALUES ($1, $2, $3) RETURNING id, user_id, period, amount",
             [userId, amount, BudgetsRepo.sqlPeriod[period]],
         );
-        const m = this.toModel(budget);
+        const m = this.budgetToModel(budget);
         if (categoryIds.length) {
             const data = categoryIds.map((id) => ({ budget_id: budget.id, category_id: id }));
             const cs = new this.helpers.ColumnSet(["budget_id", "category_id"], { table: "budget_categories" });
@@ -63,11 +94,11 @@ export class BudgetsRepo {
     }
 
     async exists(budgetId: number, userId: number): Promise<boolean> {
-        const count = await this.db.one<number>("SELECT count(*) FROM budgets WHERE id = $1 AND user_id = $2", [
-            budgetId,
-            userId,
-        ]);
-        return count > 0;
+        const result = await this.db.one<{ count: number }>(
+            "SELECT count(*) FROM budgets WHERE id = $1 AND user_id = $2 LIMIT 1",
+            [budgetId, userId],
+        );
+        return result.count > 0;
     }
 
     async deleteById(id: number): Promise<void> {

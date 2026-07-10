@@ -14,6 +14,10 @@ export class BudgetsService {
         private readonly transactor: Transactor,
     ) {}
 
+    getBudgets(userId: number): Promise<BudgetModel[]> {
+        return this.budgetsRepo.getAllByUserId(userId);
+    }
+
     createBudget(dto: CreateBudgetDto): Promise<BudgetModel> {
         return this.transactor.run(async (t) => {
             const budgetsRepo = this.budgetsRepoFactory.createRepo(t);

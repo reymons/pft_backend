@@ -48,4 +48,14 @@ describe("Budgets API", () => {
         const body = res.body as { budget: CreatedBudget };
         expect(body.budget.categoryIds.every(Number.isInteger)).toBe(true);
     });
+
+    it("deletes a budget", async () => {
+        const budget = {
+            amount: parseFloat(faker.finance.amount()),
+            period: "weekly",
+        };
+        const res = await authRequest(app, "post", "/budgets").send(budget).expect(201);
+        const body = res.body as { budget: CreatedBudget };
+        await authRequest(app, "delete", `/budgets/${body.budget.id}`).send().expect(204);
+    });
 });
