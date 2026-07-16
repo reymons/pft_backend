@@ -14,6 +14,13 @@ export class CategoriesRepoFactory {
 
 @Injectable()
 export class CategoriesRepo {
+    private static readonly getAllByBudgetIdSQL = `
+        SELECT c.id, c.user_id, c.custom_name, c.type
+        FROM categories AS c JOIN budget_categories
+        ON c.id = budget_categories.category_id
+        WHERE budget_categories.budget_id = $1
+    `;
+
     constructor(
         @Inject(DB_CLIENT) private readonly db: DBClient,
         @Inject(DB_HELPERS) private readonly helpers: DBHelpers,
@@ -26,6 +33,11 @@ export class CategoriesRepo {
         m.type = ent.type;
         m.customName = ent.custom_name;
         return m;
+    }
+
+    async getAllByBudgetId(id: number): Promise<CategoryModel[]> {
+        const rows = await this.db.manyOrNone<CategoryEntity>(CategoriesRepo.getAllByBudgetIdSQL, id);
+        return rows.map((r) => this.toModel(r));
     }
 
     async getAllByUserId(id: number): Promise<CategoryModel[]> {

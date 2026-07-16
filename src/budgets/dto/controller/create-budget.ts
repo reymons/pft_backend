@@ -1,9 +1,25 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
-import { BudgetModel, BudgetPeriod } from "@/budgets/budgets.model";
-import { BudgetRes } from "./budget";
+import {
+    IsArray,
+    IsEnum,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsString,
+    Max,
+    MaxLength,
+    Min,
+    MinLength,
+} from "class-validator";
+import { BudgetPeriod } from "@/budgets/budgets.model";
 
 export class CreateBudgetReq {
+    @ApiProperty()
+    @IsString()
+    @MinLength(1)
+    @MaxLength(50)
+    name: string;
+
     @ApiProperty()
     @IsNumber()
     @Min(1)
@@ -24,13 +40,4 @@ export class CreateBudgetReq {
     @IsString({ each: true })
     @IsOptional()
     newCategories?: string[];
-}
-
-export class CreateBudgetRes {
-    constructor(budget: BudgetModel) {
-        this.budget = new BudgetRes(budget);
-    }
-
-    @ApiProperty()
-    budget: BudgetRes;
 }

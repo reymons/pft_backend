@@ -1,3 +1,5 @@
+import { CategoryModel } from "@/categories/categories.model";
+
 export enum BudgetPeriod {
     Weekly = "weekly",
     Monthly = "monthly",
@@ -7,7 +9,8 @@ export enum BudgetPeriod {
 export class BudgetModel {
     id: number;
     userId: number;
+    name: string;
     amount: number;
     period: BudgetPeriod;
-    categoryIds: number[];
+    categories: CategoryModel[];
 }

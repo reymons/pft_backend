@@ -3,7 +3,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPip
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import { Auth } from "@/auth/auth.guard";
 import { BudgetsService } from "./budgets.service";
-import { CreateBudgetRes, CreateBudgetReq } from "./dto/controller/create-budget";
+import { CreateBudgetReq } from "./dto/controller/create-budget";
 import { BudgetRes } from "./dto/controller/budget";
 
 @Controller("budgets")
@@ -20,16 +20,17 @@ export class BudgetsController {
     }
 
     @Post()
-    @ApiCreatedResponse({ type: CreateBudgetRes })
-    async createOne(@Body() body: CreateBudgetReq, @Req() req: FastifyRequest): Promise<CreateBudgetRes> {
+    @ApiCreatedResponse({ type: BudgetRes })
+    async createOne(@Body() body: CreateBudgetReq, @Req() req: FastifyRequest): Promise<BudgetRes> {
         const budget = await this.budgetsService.createBudget({
             userId: req.user.id,
+            name: body.name,
             amount: body.amount,
             period: body.period,
             categoryIds: body.categoryIds,
             newCategories: body.newCategories,
         });
-        return new CreateBudgetRes(budget);
+        return new BudgetRes(budget);
     }
 
     @Delete(":id")

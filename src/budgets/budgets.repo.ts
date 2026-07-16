@@ -17,7 +17,7 @@ export class BudgetsRepoFactory {
 export class BudgetsRepo {
     private static readonly getAllBudgetsSQL = `
         SELECT
-            b.id, b.user_id, b.amount, b.period,
+            b.id, b.user_id, b.name, b.amount, b.period,
             COALESCE(
                 json_agg(bc.category_id) FILTER (WHERE bc.category_id IS NOT NULL),
                 '[]'
@@ -56,8 +56,9 @@ export class BudgetsRepo {
         const m = new BudgetModel();
         m.id = ent.id;
         m.userId = ent.user_id;
+        m.name = ent.name;
         m.amount = parseFloat(ent.amount);
-        m.categoryIds = [];
+        m.categories = [];
         m.period = this.sqlPeriodToModelPeriod(ent.period);
         return m;
     }
@@ -66,9 +67,10 @@ export class BudgetsRepo {
         const m = new BudgetModel();
         m.id = ent.id;
         m.userId = ent.user_id;
+        m.name = ent.name;
         m.amount = parseFloat(ent.amount);
         m.period = this.sqlPeriodToModelPeriod(ent.period);
-        m.categoryIds = [...ent.category_ids];
+        m.categories = [];
         return m;
     }
 
@@ -77,10 +79,16 @@ export class BudgetsRepo {
         return rows.map((r) => this.budgetWithCatsToModel(r));
     }
 
-    async save(userId: number, amount: number, period: BudgetPeriod, categoryIds: number[] = []): Promise<BudgetModel> {
+    async save(
+        userId: number,
+        name: string,
+        amount: number,
+        period: BudgetPeriod,
+        categoryIds: number[] = [],
+    ): Promise<BudgetModel> {
         const budget = await this.db.one<BudgetEntity>(
-            "INSERT INTO budgets(user_id, amount, period) VALUES ($1, $2, $3) RETURNING id, user_id, period, amount",
-            [userId, amount, BudgetsRepo.sqlPeriod[period]],
+            "INSERT INTO budgets(user_id, name, amount, period) VALUES ($1, $2, $3, $4) RETURNING id, user_id, name, period, amount",
+            [userId, name, amount, BudgetsRepo.sqlPeriod[period]],
         );
         const m = this.budgetToModel(budget);
         if (categoryIds.length) {
@@ -88,7 +96,6 @@ export class BudgetsRepo {
             const cs = new this.helpers.ColumnSet(["budget_id", "category_id"], { table: "budget_categories" });
             const query = this.helpers.insert(data, cs);
             await this.db.none(query);
-            m.categoryIds = [...categoryIds];
         }
         return m;
     }

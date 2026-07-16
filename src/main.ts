@@ -4,11 +4,20 @@ import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
 import FastifyCookie from "@fastify/cookie";
+import FastifyCORS from "@fastify/cors";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
     const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
     const conf = app.get(ConfigService);
+
+    await app.register(FastifyCORS, {
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        origin: (origin, cb) => {
+            cb(null, true);
+        },
+    });
 
     await app.register(FastifyCookie);
     app.setGlobalPrefix("api/v1");

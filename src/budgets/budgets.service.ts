@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { BudgetsRepo, BudgetsRepoFactory } from "./budgets.repo";
-import { CategoriesRepoFactory } from "@/categories/categories.repo";
+import { CategoriesRepo, CategoriesRepoFactory } from "@/categories/categories.repo";
 import { BudgetModel } from "./budgets.model";
 import { Transactor } from "@/db/db.transactor";
 import type { CreateBudgetDto, DeleteBudgetDto } from "./dto/service";
@@ -9,13 +9,19 @@ import type { CreateBudgetDto, DeleteBudgetDto } from "./dto/service";
 export class BudgetsService {
     constructor(
         private readonly budgetsRepo: BudgetsRepo,
+        private readonly categoriesRepo: CategoriesRepo,
         private readonly budgetsRepoFactory: BudgetsRepoFactory,
         private readonly categoriesRepoFactory: CategoriesRepoFactory,
         private readonly transactor: Transactor,
     ) {}
 
-    getBudgets(userId: number): Promise<BudgetModel[]> {
-        return this.budgetsRepo.getAllByUserId(userId);
+    async getBudgets(userId: number): Promise<BudgetModel[]> {
+        const budgets = await this.budgetsRepo.getAllByUserId(userId);
+        const promises = budgets.map(async (budget) => {
+            budget.categories = await this.categoriesRepo.getAllByBudgetId(budget.id);
+        });
+        await Promise.all(promises);
+        return budgets;
     }
 
     createBudget(dto: CreateBudgetDto): Promise<BudgetModel> {
@@ -29,7 +35,9 @@ export class BudgetsService {
                 categoryIds.push(...ids);
             }
 
-            return budgetsRepo.save(dto.userId, dto.amount, dto.period, categoryIds);
+            const budget = await budgetsRepo.save(dto.userId, dto.name, dto.amount, dto.period, categoryIds);
+            budget.categories = await categoriesRepo.getAllByBudgetId(budget.id);
+            return budget;
         });
     }
 

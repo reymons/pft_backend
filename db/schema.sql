@@ -24,6 +24,7 @@ INSERT INTO categories(type) VALUES ('groceries', 'food', 'furniture', 'sports')
 CREATE TABLE budgets (
     id serial,
     user_id integer NOT NULL,
+    name varchar(50) NOT NULL,
     amount numeric(12, 2) NOT NULL,
     period interval NOT NULL,
 
