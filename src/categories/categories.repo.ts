@@ -26,7 +26,7 @@ export class CategoriesRepo {
         @Inject(DB_HELPERS) private readonly helpers: DBHelpers,
     ) {}
 
-    private toModel(ent: CategoryEntity): CategoryModel {
+    static toModel(ent: CategoryEntity): CategoryModel {
         const m = new CategoryModel();
         m.id = ent.id;
         m.userId = ent.user_id;
@@ -35,9 +35,17 @@ export class CategoriesRepo {
         return m;
     }
 
+    async getById(id: number): Promise<CategoryModel> {
+        const ent = await this.db.one<CategoryEntity>(
+            "SELECT id, user_id, custom_name, type FROM categories WHERE id = $1",
+            id,
+        );
+        return CategoriesRepo.toModel(ent);
+    }
+
     async getAllByBudgetId(id: number): Promise<CategoryModel[]> {
         const rows = await this.db.manyOrNone<CategoryEntity>(CategoriesRepo.getAllByBudgetIdSQL, id);
-        return rows.map((r) => this.toModel(r));
+        return rows.map((r) => CategoriesRepo.toModel(r));
     }
 
     async getAllByUserId(id: number): Promise<CategoryModel[]> {
@@ -45,14 +53,14 @@ export class CategoriesRepo {
             "SELECT id, user_id, custom_name, type FROM categories WHERE user_id = $1",
             id,
         );
-        return rows.map((r) => this.toModel(r));
+        return rows.map((r) => CategoriesRepo.toModel(r));
     }
 
     async getAllDefault(): Promise<CategoryModel[]> {
         const rows = await this.db.many<CategoryEntity>(
             "SELECT id, user_id, custom_name, type FROM categories WHERE user_id IS NULL",
         );
-        return rows.map((r) => this.toModel(r));
+        return rows.map((r) => CategoriesRepo.toModel(r));
     }
 
     async saveMany(userId: number, names: string[]): Promise<number[]> {
@@ -68,7 +76,7 @@ export class CategoriesRepo {
             "INSERT INTO categories(user_id, custom_name) VALUES ($1, $2) RETURNING id, user_id, custom_name, type",
             [userId, name],
         );
-        return this.toModel(ent);
+        return CategoriesRepo.toModel(ent);
     }
 
     async delete(categoryId: number, userId: number): Promise<void> {
@@ -80,6 +88,6 @@ export class CategoriesRepo {
             "UPDATE categories SET custom_name = $1 WHERE id = $2 AND user_id = $3 RETURNING id, user_id, custom_name, type",
             [name, categoryId, userId],
         );
-        return this.toModel(ent);
+        return CategoriesRepo.toModel(ent);
     }
 }

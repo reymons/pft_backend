@@ -10,4 +10,8 @@ export class CategoryModel {
     userId: number | null;
     type: CategoryType | null;
     customName: string | null;
+
+    get isDefault() {
+        return this.userId === null;
+    }
 }

@@ -1,3 +1,5 @@
+CREATE EXTENSION pg_trgm;
+
 CREATE TABLE users (
     id serial,
     name varchar(50) NOT NULL,
@@ -48,6 +50,7 @@ CREATE TABLE recurring_transactions (
     user_id integer NOT NULL,
     type transaction_type NOT NULL,
     name varchar(50) NOT NULL,
+    amount numeric(12, 2) NOT NULL,
     category_id integer NOT NULL,
     description varchar(100),
     update_interval interval NOT NULL,
@@ -63,6 +66,7 @@ CREATE TABLE transactions (
     user_id integer NOT NULL,
     type transaction_type NOT NULL,
     name varchar(50) NOT NULL,
+    amount numeric(12, 2) NOT NULL,
     category_id integer NOT NULL,
     recurring_trx_id integer,
     description varchar(100),
