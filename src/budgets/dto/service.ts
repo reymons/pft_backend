@@ -13,3 +13,8 @@ export type DeleteBudgetDto = {
     budgetId: number;
     userId: number;
 };
+
+export type EditBudgetDto = Partial<Omit<CreateBudgetDto, "userId">> & {
+    userId: number;
+    budgetId: number;
+};

@@ -1,10 +1,23 @@
 import { type FastifyRequest } from "fastify";
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Req } from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Req,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import { Auth } from "@/auth/auth.guard";
 import { BudgetsService } from "./budgets.service";
 import { CreateBudgetReq } from "./dto/controller/create-budget";
 import { BudgetRes } from "./dto/controller/budget";
+import { EditBudgetReq } from "./dto/controller/edit-budget";
 
 @Controller("budgets")
 @Auth()
@@ -35,8 +48,22 @@ export class BudgetsController {
 
     @Delete(":id")
     @HttpCode(HttpStatus.NO_CONTENT)
-    //@ApiResponse({ status: HttpStatus.NO_CONTENT })
     async deleteOne(@Param("id", ParseIntPipe) id: number, @Req() req: FastifyRequest): Promise<void> {
         await this.budgetsService.deleteBudget({ budgetId: id, userId: req.user.id });
+    }
+
+    @Patch(":id")
+    @ApiOkResponse({ type: BudgetRes })
+    async editOne(
+        @Param("id", ParseIntPipe) id: number,
+        @Body() body: EditBudgetReq,
+        @Req() req: FastifyRequest,
+    ): Promise<BudgetRes> {
+        const budget = await this.budgetsService.editBudget({
+            ...body,
+            budgetId: id,
+            userId: req.user.id,
+        });
+        return new BudgetRes(budget);
     }
 }

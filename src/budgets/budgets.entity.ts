@@ -1,3 +1,4 @@
+import { CategoryEntity } from "@/categories/categories.entity";
 import { PostgresInterval } from "@/db/db.types";
 
 export type BudgetEntity = {
@@ -9,5 +10,5 @@ export type BudgetEntity = {
 };
 
 export type BudgetWithCategoriesEntity = BudgetEntity & {
-    category_ids: number[];
+    categories: CategoryEntity[];
 };
