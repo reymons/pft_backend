@@ -79,9 +79,6 @@ export class BudgetsRepo {
         yearly: "1 year",
     };
 
-    private static readonly deleteCategoriesSQL = `
-    `;
-
     constructor(
         @Inject(DB_CLIENT) private readonly db: DBClient,
         @Inject(DB_HELPERS) private readonly helpers: DBHelpers,
