@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
     IsArray,
+    IsDateString,
     IsEnum,
     IsInt,
     IsNumber,
@@ -32,6 +33,11 @@ export class EditBudgetReq {
     @IsOptional()
     @IsEnum(BudgetPeriod)
     period?: BudgetPeriod;
+
+    @ApiProperty({ type: Date })
+    @IsOptional()
+    @IsDateString()
+    startsAt?: string;
 
     @ApiProperty({ isArray: true, type: "number", required: false })
     @IsInt({ each: true })

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DB_CLIENT, DB_HELPERS, type DBHelpers, type DBClient } from "@/db/db.client";
 import { BudgetModel, BudgetPeriod } from "./budgets.model";
-import { BudgetEntity, BudgetWithCategoriesEntity } from "./budgets.entity";
+import { BudgetWithCategoriesEntity } from "./budgets.entity";
 import { PostgresInterval } from "@/db/db.types";
 import { SaveBudgetDto, PatchBudgetDto } from "./dto/repo";
 import { CategoriesRepo } from "@/categories/categories.repo";
@@ -17,13 +17,35 @@ export class BudgetsRepoFactory {
 
 @Injectable()
 export class BudgetsRepo {
-    private static readonly getAllBudgetsSQL = `
+    private static readonly getBudgetSQL = (many: boolean) => `
+        WITH budget_period_windows AS (
+            SELECT
+                id AS budget_id,
+                period,
+                CASE
+                    WHEN starts_at > now() THEN starts_at
+                    ELSE starts_at + floor(extract(epoch FROM (now() - starts_at)) / extract(epoch FROM period)) * period
+                END AS period_start
+            FROM budgets
+        ),
+        budget_total_spent AS (
+            SELECT bpw.budget_id, coalesce(sum(t.amount), 0)::float as total_spent
+            FROM budget_period_windows AS bpw
+            LEFT JOIN budget_categories AS bc ON bc.budget_id = bpw.budget_id
+            LEFT JOIN transactions AS t ON
+                (t.category_id = bc.category_id OR bc.category_id IS NULL) AND
+                t.created_at >= bpw.period_start AND
+                t.created_at < bpw.period_start + bpw.period
+            GROUP BY bpw.budget_id
+        )
         SELECT
             b.id,
             b.user_id,
             b.name,
             b.amount,
             b.period,
+            b.starts_at,
+            bts.total_spent AS total_spent,
             coalesce(
                 json_agg(
                     json_build_object(
@@ -36,35 +58,11 @@ export class BudgetsRepo {
                 '[]'
             ) AS categories
         FROM budgets AS b
+        JOIN budget_total_spent AS bts ON b.id = bts.budget_id
         LEFT JOIN budget_categories AS bc ON b.id = bc.budget_id
         LEFT JOIN categories AS c ON bc.category_id = c.id
-        WHERE b.user_id = $1
-        GROUP BY b.id
-    `;
-
-    private static readonly getBudgetSQL = `
-        SELECT
-            b.id,
-            b.user_id,
-            b.name,
-            b.amount,
-            b.period,
-            coalesce(
-                json_agg(
-                    json_build_object(
-                        'id', c.id,
-                        'user_id', c.user_id,
-                        'type', c.type,
-                        'custom_name', c.custom_name
-                    )
-                ) FILTER (WHERE c.id IS NOT NULL),
-                '[]'
-            ) AS categories
-        FROM budgets AS b
-        LEFT JOIN budget_categories AS bc ON b.id = bc.budget_id
-        LEFT JOIN categories AS c ON bc.category_id = c.id
-        WHERE b.id = $1 AND b.user_id = $2
-        GROUP BY b.id
+        WHERE ${many ? "" : "b.id = $(budgetId) AND"} b.user_id = $(userId)
+        GROUP BY b.id, bts.total_spent
     `;
 
     private static readonly insertCategoriesSQL = `
@@ -97,17 +95,6 @@ export class BudgetsRepo {
         throw new Error("Unknown budget period");
     }
 
-    private budgetToModel(ent: BudgetEntity): BudgetModel {
-        const m = new BudgetModel();
-        m.id = ent.id;
-        m.userId = ent.user_id;
-        m.name = ent.name;
-        m.amount = parseFloat(ent.amount);
-        m.categories = [];
-        m.period = this.sqlPeriodToModelPeriod(ent.period);
-        return m;
-    }
-
     private budgetWithCatsToModel(ent: BudgetWithCategoriesEntity): BudgetModel {
         const m = new BudgetModel();
         m.id = ent.id;
@@ -115,28 +102,36 @@ export class BudgetsRepo {
         m.name = ent.name;
         m.amount = parseFloat(ent.amount);
         m.period = this.sqlPeriodToModelPeriod(ent.period);
+        m.totalSpent = ent.total_spent;
+        m.startsAt = ent.starts_at;
         m.categories = ent.categories.map((ent) => CategoriesRepo.toModel(ent));
         return m;
     }
 
+    private async getOne(db: DBClient, budgetId: number, userId: number): Promise<BudgetModel> {
+        const ent = await db.one<BudgetWithCategoriesEntity>(BudgetsRepo.getBudgetSQL(false), { budgetId, userId });
+        return this.budgetWithCatsToModel(ent);
+    }
+
     async getAllByUserId(userId: number): Promise<BudgetModel[]> {
-        const rows = await this.db.many<BudgetWithCategoriesEntity>(BudgetsRepo.getAllBudgetsSQL, userId);
+        const rows = await this.db.many<BudgetWithCategoriesEntity>(BudgetsRepo.getBudgetSQL(true), { userId });
         return rows.map((r) => this.budgetWithCatsToModel(r));
     }
 
     async save(dto: SaveBudgetDto): Promise<BudgetModel> {
-        const budget = await this.db.one<BudgetEntity>(
-            "INSERT INTO budgets(user_id, name, amount, period) VALUES ($1, $2, $3, $4) RETURNING id, user_id, name, period, amount",
-            [dto.userId, dto.name, dto.amount, BudgetsRepo.sqlPeriod[dto.period]],
-        );
-        const m = this.budgetToModel(budget);
-        if (dto.categoryIds?.length) {
-            const data = dto.categoryIds.map((id) => ({ budget_id: budget.id, category_id: id }));
-            const cs = new this.helpers.ColumnSet(["budget_id", "category_id"], { table: "budget_categories" });
-            const query = this.helpers.insert(data, cs);
-            await this.db.none(query);
-        }
-        return m;
+        return this.db.tx<BudgetModel>(async (t) => {
+            const { id: budgetId } = await this.db.one<{ id: number }>(
+                "INSERT INTO budgets(user_id, name, amount, period, starts_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                [dto.userId, dto.name, dto.amount, BudgetsRepo.sqlPeriod[dto.period], dto.startsAt],
+            );
+            if (dto.categoryIds?.length) {
+                const data = dto.categoryIds.map((id) => ({ budget_id: budgetId, category_id: id }));
+                const cs = new this.helpers.ColumnSet(["budget_id", "category_id"], { table: "budget_categories" });
+                const query = this.helpers.insert(data, cs);
+                await this.db.none(query);
+            }
+            return this.getOne(t, budgetId, dto.userId);
+        });
     }
 
     async exists(budgetId: number, userId: number): Promise<boolean> {
@@ -147,47 +142,45 @@ export class BudgetsRepo {
         return result.count > 0;
     }
 
-    private async getOne(db: DBClient, budgetId: number, userId: number): Promise<BudgetModel> {
-        const ent = await db.one<BudgetWithCategoriesEntity>(BudgetsRepo.getBudgetSQL, [budgetId, userId]);
-        return this.budgetWithCatsToModel(ent);
-    }
-
     async deleteById(id: number): Promise<void> {
         await this.db.none("DELETE FROM budgets WHERE id = $1", id);
     }
 
-    private buildSet(dto: PatchBudgetDto, idx: number) {
+    private buildSet(dto: PatchBudgetDto) {
         const cond: string[] = [];
-        const v: unknown[] = [];
+        const values: Record<string, unknown> = {};
         if (dto.name !== undefined) {
-            cond.push(`name = $${idx++}`);
-            v.push(dto.name);
+            cond.push("name = $(name)");
+            values.name = dto.name;
         }
         if (dto.amount !== undefined) {
-            cond.push(`amount = $${idx++}`);
-            v.push(dto.amount);
+            cond.push("amount = $(amount)");
+            values.amount = dto.amount;
         }
         if (dto.period) {
-            cond.push(`period = $${idx++}`);
-            v.push(BudgetsRepo.sqlPeriod[dto.period]);
+            cond.push("period = $(period)");
+            values.period = BudgetsRepo.sqlPeriod[dto.period];
         }
-        return { sql: cond.join(","), values: v, idx };
+        if (dto.startsAt) {
+            cond.push("starts_at = $(startsAt)");
+            values.startsAt = dto.startsAt;
+        }
+        return { sql: cond.join(","), values };
     }
 
     async patch(dto: PatchBudgetDto): Promise<BudgetModel> {
-        let idx = 1;
-        const set = this.buildSet(dto, idx);
-        idx = set.idx;
+        const set = this.buildSet(dto);
         if (!set.sql) {
             throw new Error("Nothing to patch");
         }
         return this.db.tx(async (t) => {
             const queries: Promise<null>[] = [];
-            const q = t.none(`UPDATE budgets SET ${set.sql} WHERE id = $${idx++} AND user_id = $${idx++}`, [
-                ...set.values,
-                dto.budgetId,
-                dto.userId,
-            ]);
+            set.values.budgetId = dto.budgetId;
+            set.values.userId = dto.userId;
+            const q = t.none(
+                `UPDATE budgets SET ${set.sql} WHERE id = $(budgetId) AND user_id = $(userId)`,
+                set.values,
+            );
             queries.push(q);
             if (dto.categoryIds?.length) {
                 let q = t.none("DELETE FROM budget_categories WHERE budget_id = $1 AND category_id <> ALL($2::int[])", [

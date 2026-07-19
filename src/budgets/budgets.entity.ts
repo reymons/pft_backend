@@ -6,9 +6,12 @@ export type BudgetEntity = {
     user_id: number;
     name: string;
     amount: string;
+    spent: number;
     period: PostgresInterval;
+    starts_at: string;
 };
 
 export type BudgetWithCategoriesEntity = BudgetEntity & {
     categories: CategoryEntity[];
+    total_spent: number;
 };

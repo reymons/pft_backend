@@ -29,6 +29,7 @@ CREATE TABLE budgets (
     name varchar(50) NOT NULL,
     amount numeric(12, 2) NOT NULL,
     period interval NOT NULL,
+    starts_at timestamptz NOT NULL,
 
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

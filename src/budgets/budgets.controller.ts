@@ -40,6 +40,7 @@ export class BudgetsController {
             name: body.name,
             amount: body.amount,
             period: body.period,
+            startsAt: body.startsAt,
             categoryIds: body.categoryIds,
             newCategories: body.newCategories,
         });

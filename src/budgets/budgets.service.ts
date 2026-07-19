@@ -34,6 +34,7 @@ export class BudgetsService {
                 name: dto.name,
                 amount: dto.amount,
                 period: dto.period,
+                startsAt: dto.startsAt,
                 categoryIds,
             });
             budget.categories = await categoriesRepo.getAllByBudgetId(budget.id);

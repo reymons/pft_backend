@@ -5,6 +5,7 @@ export type CreateBudgetDto = {
     name: string;
     amount: number;
     period: BudgetPeriod;
+    startsAt: string;
     categoryIds?: number[];
     newCategories?: string[];
 };

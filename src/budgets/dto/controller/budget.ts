@@ -12,8 +12,14 @@ export class BudgetRes {
     @ApiProperty()
     amount: number;
 
+    @ApiProperty()
+    totalSpent: number;
+
     @ApiProperty({ enum: BudgetPeriod })
     period: BudgetPeriod;
+
+    @ApiProperty()
+    startsAt: string;
 
     @ApiProperty({ isArray: true, type: CategoryRes })
     categories: CategoryRes[];
@@ -22,7 +28,9 @@ export class BudgetRes {
         this.id = budget.id;
         this.name = budget.name;
         this.amount = budget.amount;
+        this.totalSpent = budget.totalSpent;
         this.period = budget.period;
+        this.startsAt = budget.startsAt;
         this.categories = [...budget.categories];
     }
 }

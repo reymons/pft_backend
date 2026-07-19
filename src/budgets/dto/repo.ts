@@ -5,6 +5,7 @@ export type SaveBudgetDto = {
     name: string;
     amount: number;
     period: BudgetPeriod;
+    startsAt: string;
     categoryIds?: number[];
 };
 

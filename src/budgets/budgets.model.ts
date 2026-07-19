@@ -12,5 +12,7 @@ export class BudgetModel {
     name: string;
     amount: number;
     period: BudgetPeriod;
+    totalSpent: number;
     categories: CategoryModel[];
+    startsAt: string;
 }
