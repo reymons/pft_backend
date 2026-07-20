@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { Transactor } from "@/db/db.transactor";
 import { CategoriesRepoFactory } from "@/categories/categories.repo";
 import { TransactionsRepo, TransactionsRepoFactory } from "./transactions.repo";
@@ -15,6 +16,11 @@ export class TransactionsService {
         private readonly trxRepo: TransactionsRepo,
     ) {}
 
+    @Cron(CronExpression.EVERY_HOUR)
+    protected async checkRecurringTransactionsCron() {
+        await this.trxRepo.updateDue();
+    }
+
     async createTransaction(dto: CreateTrxDto): Promise<TransactionModel> {
         return this.transactor.run(async (t) => {
             const categoriesRepo = this.categoriesRepoFactory.createRepo(t);
@@ -26,7 +32,9 @@ export class TransactionsService {
             }
 
             const trx = await trxRepo.save(dto);
-            trx.category = category;
+            if (trx.recurringTrxId) {
+                await trxRepo.updateDue(trx.recurringTrxId);
+            }
             return trx;
         });
     }

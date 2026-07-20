@@ -25,6 +25,9 @@ export class TrxRes {
     recurringPeriod: RecurringTrxPeriod | null;
 
     @ApiProperty()
+    addedAt: string;
+
+    @ApiProperty()
     createdAt: string;
 
     constructor(trx: TransactionModel) {
@@ -35,6 +38,7 @@ export class TrxRes {
         this.amount = trx.amount;
         this.category = trx.category;
         this.recurringPeriod = trx.recurringPeriod;
+        this.addedAt = trx.addedAt;
         this.createdAt = trx.createdAt;
     }
 }

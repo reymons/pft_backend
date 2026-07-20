@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
 import { DBModule } from "./db/db.module";
 import { JwtModule } from "./jwt/jwt.module";
 import { AuthModule } from "./auth/auth.module";
@@ -15,6 +16,7 @@ import { StatsModule } from "./stats/stats.module";
             isGlobal: true,
             envFilePath: [`.env.${process.env.APP_ENV}`, ".env"],
         }),
+        ScheduleModule.forRoot(),
         DBModule,
         JwtModule,
         AuthModule,

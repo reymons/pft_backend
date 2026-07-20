@@ -1,6 +1,6 @@
 import { RecurringTrxPeriod, TransactionType } from "@/transactions/transactions.model";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from "class-validator";
+import { IsDateString, IsEnum, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from "class-validator";
 
 export class CreateTrxReq {
     @ApiProperty()
@@ -34,4 +34,8 @@ export class CreateTrxReq {
     @IsNumber()
     @IsPositive()
     categoryId: number;
+
+    @ApiProperty()
+    @IsDateString()
+    addedAt: string;
 }

@@ -33,9 +33,10 @@ export class BudgetsRepo {
             FROM budget_period_windows AS bpw
             LEFT JOIN budget_categories AS bc ON bc.budget_id = bpw.budget_id
             LEFT JOIN transactions AS t ON
+                t.type = 'expense' AND
                 (t.category_id = bc.category_id OR bc.category_id IS NULL) AND
-                t.created_at >= bpw.period_start AND
-                t.created_at < bpw.period_start + bpw.period
+                t.added_at >= bpw.period_start AND
+                t.added_at < bpw.period_start + bpw.period
             GROUP BY bpw.budget_id
         )
         SELECT

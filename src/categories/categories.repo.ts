@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { DB_CLIENT, DB_HELPERS, type DBHelpers, type DBClient } from "@/db/db.client";
 import { CategoryEntity } from "./categories.entity";
 import { CategoryModel } from "./categories.model";
+import { EntityWithId } from "@/common/entity";
 
 @Injectable()
 export class CategoriesRepoFactory {
@@ -14,11 +15,8 @@ export class CategoriesRepoFactory {
 
 @Injectable()
 export class CategoriesRepo {
-    private static readonly getAllByBudgetIdSQL = `
-        SELECT c.id, c.user_id, c.custom_name, c.type
-        FROM categories AS c JOIN budget_categories
-        ON c.id = budget_categories.category_id
-        WHERE budget_categories.budget_id = $1
+    private static readonly getCategoriesSQL = ({ where }: { where: string }) => `
+        SELECT id, user_id, custom_name, type FROM categories WHERE ${where}
     `;
 
     constructor(
@@ -35,32 +33,26 @@ export class CategoriesRepo {
         return m;
     }
 
-    async getById(id: number): Promise<CategoryModel> {
-        const ent = await this.db.one<CategoryEntity>(
-            "SELECT id, user_id, custom_name, type FROM categories WHERE id = $1",
-            id,
-        );
+    private async getOne(db: DBClient, id: number) {
+        const ent = await db.one<CategoryEntity>(CategoriesRepo.getCategoriesSQL({ where: "id = $1" }), id);
         return CategoriesRepo.toModel(ent);
     }
 
-    async getAllByBudgetId(id: number): Promise<CategoryModel[]> {
-        const rows = await this.db.manyOrNone<CategoryEntity>(CategoriesRepo.getAllByBudgetIdSQL, id);
-        return rows.map((r) => CategoriesRepo.toModel(r));
+    private async getMany(db: DBClient, where: string, values: Record<string, unknown>) {
+        const ents = await db.manyOrNone<CategoryEntity>(CategoriesRepo.getCategoriesSQL({ where }), values);
+        return ents.map((ent) => CategoriesRepo.toModel(ent));
+    }
+
+    async getById(id: number): Promise<CategoryModel> {
+        return this.getOne(this.db, id);
     }
 
     async getAllByUserId(id: number): Promise<CategoryModel[]> {
-        const rows = await this.db.many<CategoryEntity>(
-            "SELECT id, user_id, custom_name, type FROM categories WHERE user_id = $1",
-            id,
-        );
-        return rows.map((r) => CategoriesRepo.toModel(r));
+        return this.getMany(this.db, "user_id = $(userId)", { userId: id });
     }
 
     async getAllDefault(): Promise<CategoryModel[]> {
-        const rows = await this.db.many<CategoryEntity>(
-            "SELECT id, user_id, custom_name, type FROM categories WHERE user_id IS NULL",
-        );
-        return rows.map((r) => CategoriesRepo.toModel(r));
+        return this.getMany(this.db, "user_id IS NULL", {});
     }
 
     async saveMany(userId: number, names: string[]): Promise<number[]> {
@@ -84,10 +76,10 @@ export class CategoriesRepo {
     }
 
     async patch(categoryId: number, userId: number, name: string): Promise<CategoryModel> {
-        const ent = await this.db.one<CategoryEntity>(
-            "UPDATE categories SET custom_name = $1 WHERE id = $2 AND user_id = $3 RETURNING id, user_id, custom_name, type",
+        const ent = await this.db.one<EntityWithId>(
+            "UPDATE categories SET custom_name = $1 WHERE id = $2 AND user_id = $3 RETURNING id",
             [name, categoryId, userId],
         );
-        return CategoriesRepo.toModel(ent);
+        return this.getOne(this.db, ent.id);
     }
 }

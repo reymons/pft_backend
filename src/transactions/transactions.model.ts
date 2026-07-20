@@ -11,6 +11,12 @@ export enum TransactionType {
     Expense = "expense",
 }
 
+export class RecurringTrxModel {
+    id: number;
+    updatedAt: string;
+    period: RecurringTrxPeriod;
+}
+
 export class TransactionModel {
     id: number;
     name: string;
@@ -18,6 +24,8 @@ export class TransactionModel {
     type: TransactionType;
     amount: number;
     recurringPeriod: RecurringTrxPeriod | null;
+    recurringTrxId: number | null;
+    addedAt: string;
     createdAt: string;
     category: CategoryModel;
 

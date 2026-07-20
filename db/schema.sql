@@ -21,7 +21,7 @@ CREATE TABLE categories (
     UNIQUE (user_id, custom_name)
 );
 
-INSERT INTO categories(type) VALUES ('groceries', 'food', 'furniture', 'sports');
+INSERT INTO categories(type) VALUES ('groceries', 'furniture', 'sports', 'food');
 
 CREATE TABLE budgets (
     id serial,
@@ -55,7 +55,7 @@ CREATE TABLE recurring_transactions (
     category_id integer NOT NULL,
     description varchar(100),
     update_interval interval NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT NOW(), 
+    updates_at timestamptz NOT NULL,
 
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -71,6 +71,7 @@ CREATE TABLE transactions (
     category_id integer NOT NULL,
     recurring_trx_id integer,
     description varchar(100),
+    added_at timestamptz NOT NULL,
     created_at timestamptz NOT NULL DEFAULT NOW(),
 
     PRIMARY KEY (id),

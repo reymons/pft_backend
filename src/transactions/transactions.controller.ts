@@ -25,6 +25,7 @@ export class TransactionsController {
             recurringPeriod: body.recurringPeriod,
             userId: req.user.id,
             categoryId: body.categoryId,
+            addedAt: body.addedAt,
         });
         return new TrxRes(trx);
     }

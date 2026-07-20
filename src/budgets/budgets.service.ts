@@ -22,14 +22,12 @@ export class BudgetsService {
         return this.transactor.run(async (t) => {
             const budgetsRepo = this.budgetsRepoFactory.createRepo(t);
             const categoriesRepo = this.categoriesRepoFactory.createRepo(t);
-
             const categoryIds = [...(dto.categoryIds || [])];
             if (dto.newCategories?.length) {
                 const ids = await categoriesRepo.saveMany(dto.userId, dto.newCategories);
                 categoryIds.push(...ids);
             }
-
-            const budget = await budgetsRepo.save({
+            return budgetsRepo.save({
                 userId: dto.userId,
                 name: dto.name,
                 amount: dto.amount,
@@ -37,8 +35,6 @@ export class BudgetsService {
                 startsAt: dto.startsAt,
                 categoryIds,
             });
-            budget.categories = await categoriesRepo.getAllByBudgetId(budget.id);
-            return budget;
         });
     }
 

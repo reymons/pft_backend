@@ -7,5 +7,6 @@ export type SaveTrxDto = {
     amount: number;
     categoryId: number;
     userId: number;
+    addedAt: string;
     recurringPeriod?: RecurringTrxPeriod;
 };

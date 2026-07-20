@@ -21,7 +21,7 @@ export class StatsRepo {
         SELECT c.id, c.type, c.custom_name, sum(t.amount)::int AS amount
         FROM categories AS c
         JOIN transactions AS t ON c.id = t.category_id
-        WHERE t.user_id = $(userId) AND t.type = 'expense' AND t.created_at >= NOW() - INTERVAL '${StatsRepo.periodToInterval[q.period]}'
+        WHERE t.user_id = $(userId) AND t.type = 'expense' AND t.added_at >= NOW() - INTERVAL '${StatsRepo.periodToInterval[q.period]}'
         GROUP BY c.id
         ${StatsRepo.limitClause(q.limit)}
     `;
