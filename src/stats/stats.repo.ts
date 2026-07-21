@@ -43,7 +43,17 @@ export class StatsRepo {
                         WHEN type = 'income' THEN amount
                         WHEN type = 'expense' THEN -amount
                     END
-                ), 0)::float AS balance
+                ), 0)::float AS balance,
+                sum(amount) FILTER (
+                    WHERE type = 'expense' AND
+                        added_at >= date_trunc('month', current_date) AND
+                        added_at < date_trunc('month', current_date) + INTERVAL '1 month'
+                )::float AS spending_this_month,
+                sum(amount) FILTER (
+                    WHERE type = 'expense' AND
+                        added_at >= date_trunc('month', current_date) - INTERVAL '1 month' AND
+                        added_at < date_trunc('month', current_date)
+                )::float AS spending_prev_month
             FROM transactions WHERE user_id = $(userId)
         ),
         budgets_summary AS (

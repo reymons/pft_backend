@@ -17,11 +17,19 @@ export class SummaryRes {
     @ApiProperty()
     balance: number;
 
+    @ApiProperty()
+    spendingThisMonth: number;
+
+    @ApiProperty()
+    spendingPrevMonth: number;
+
     constructor(ent: SummaryEntity) {
         this.budgets = ent.budgets;
         this.transactions = ent.transactions;
         this.transactionsPrevMonth = ent.transactions_prev_month;
         this.transactionsThisMonth = ent.transactions_this_month;
         this.balance = ent.balance;
+        this.spendingThisMonth = ent.spending_this_month;
+        this.spendingPrevMonth = ent.spending_prev_month;
     }
 }

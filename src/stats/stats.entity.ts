@@ -10,4 +10,6 @@ export type SummaryEntity = {
     transactions_prev_month: number;
     transactions_this_month: number;
     budgets: number;
+    spending_this_month: number;
+    spending_prev_month: number;
 };
