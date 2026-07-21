@@ -115,7 +115,7 @@ export class BudgetsRepo {
     }
 
     async getAllByUserId(userId: number): Promise<BudgetModel[]> {
-        const rows = await this.db.many<BudgetWithCategoriesEntity>(BudgetsRepo.getBudgetSQL(true), { userId });
+        const rows = await this.db.manyOrNone<BudgetWithCategoriesEntity>(BudgetsRepo.getBudgetSQL(true), { userId });
         return rows.map((r) => this.budgetWithCatsToModel(r));
     }
 

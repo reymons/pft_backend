@@ -23,6 +23,7 @@ export class StatsRepo {
         JOIN transactions AS t ON c.id = t.category_id
         WHERE t.user_id = $(userId) AND t.type = 'expense' AND t.added_at >= NOW() - INTERVAL '${StatsRepo.periodToInterval[q.period]}'
         GROUP BY c.id
+        ORDER BY c.id DESC
         ${StatsRepo.limitClause(q.limit)}
     `;
 
@@ -44,15 +45,21 @@ export class StatsRepo {
                         WHEN type = 'expense' THEN -amount
                     END
                 ), 0)::float AS balance,
-                sum(amount) FILTER (
-                    WHERE type = 'expense' AND
-                        added_at >= date_trunc('month', current_date) AND
-                        added_at < date_trunc('month', current_date) + INTERVAL '1 month'
+                coalesce(
+                    sum(amount) FILTER (
+                        WHERE type = 'expense' AND
+                            added_at >= date_trunc('month', current_date) AND
+                            added_at < date_trunc('month', current_date) + INTERVAL '1 month'
+                    ),
+                    0
                 )::float AS spending_this_month,
-                sum(amount) FILTER (
-                    WHERE type = 'expense' AND
-                        added_at >= date_trunc('month', current_date) - INTERVAL '1 month' AND
-                        added_at < date_trunc('month', current_date)
+                coalesce(
+                    sum(amount) FILTER (
+                        WHERE type = 'expense' AND
+                            added_at >= date_trunc('month', current_date) - INTERVAL '1 month' AND
+                            added_at < date_trunc('month', current_date)
+                    ),
+                    0
                 )::float AS spending_prev_month
             FROM transactions WHERE user_id = $(userId)
         ),
