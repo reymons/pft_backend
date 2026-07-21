@@ -5,6 +5,7 @@ import { Auth } from "@/auth/auth.guard";
 import { StatsRepo } from "./stats.repo";
 import { TopSpendingCategoryRes } from "./dto/controller/top-spending-category";
 import { TopSpendingCategoriesQuery } from "./query/top-spending-categories";
+import { SummaryRes } from "./dto/controller/summary";
 
 @Controller("stats")
 @Auth()
@@ -20,5 +21,12 @@ export class StatsController {
     ): Promise<TopSpendingCategoryRes[]> {
         const categories = await this.statsRepo.getTopSpendingCategories(req.user.id, query);
         return categories.map((c) => new TopSpendingCategoryRes(c));
+    }
+
+    @Get("summary")
+    @ApiOkResponse({ type: SummaryRes })
+    async getSummary(@Req() req: FastifyRequest) {
+        const ent = await this.statsRepo.getSummary(req.user.id);
+        return new SummaryRes(ent);
     }
 }

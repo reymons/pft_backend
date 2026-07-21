@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DB_CLIENT, type DBClient } from "@/db/db.client";
 import { TopSpendingCategoryModel, TopSpendingCategoryPeriod } from "./stats.model";
-import { TopSpendingCategoryEntity } from "./stats.entity";
+import { SummaryEntity, TopSpendingCategoryEntity } from "./stats.entity";
 import { CategoriesRepo } from "@/categories/categories.repo";
 import { TopSpendingCategoriesQuery } from "./query/top-spending-categories";
 
@@ -26,6 +26,33 @@ export class StatsRepo {
         ${StatsRepo.limitClause(q.limit)}
     `;
 
+    private static getSummarySQL = `
+        WITH trx_summary AS (
+            SELECT
+                count(*)::int AS transactions,
+                count(*) FILTER (
+                    WHERE added_at >= date_trunc('month', current_date) AND
+                        added_at < date_trunc('month', current_date) + INTERVAL '1 month'
+                )::int AS transactions_this_month,
+                count(*) FILTER (
+                    WHERE added_at >= date_trunc('month', current_date) - INTERVAL '1 month' AND
+                        added_at < date_trunc('month', current_date)
+                )::int AS transactions_prev_month,
+                coalesce(sum(
+                    CASE
+                        WHEN type = 'income' THEN amount
+                        WHEN type = 'expense' THEN -amount
+                    END
+                ), 0)::float AS balance
+            FROM transactions WHERE user_id = $(userId)
+        ),
+        budgets_summary AS (
+            SELECT count(*)::int AS budgets
+            FROM budgets WHERE user_id = $(userId)
+        )
+        SELECT * FROM trx_summary CROSS JOIN budgets_summary
+    `;
+
     constructor(@Inject(DB_CLIENT) private readonly db: DBClient) {}
 
     static toTopSpendingCategoryModel(ent: TopSpendingCategoryEntity): TopSpendingCategoryModel {
@@ -41,5 +68,9 @@ export class StatsRepo {
             limit: q.limit,
         });
         return ents.map((ent) => StatsRepo.toTopSpendingCategoryModel(ent));
+    }
+
+    async getSummary(userId: number): Promise<SummaryEntity> {
+        return this.db.one<SummaryEntity>(StatsRepo.getSummarySQL, { userId });
     }
 }
