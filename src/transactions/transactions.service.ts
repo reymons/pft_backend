@@ -6,6 +6,8 @@ import { TransactionsRepo, TransactionsRepoFactory } from "./transactions.repo";
 import { TransactionModel } from "./transactions.model";
 import { CreateTrxDto } from "./dto/service";
 import { TransactionsQuery } from "./query/trx";
+import { EventBus } from "@/pubsub/pubsub.bus";
+import { TransactionUpdatedEvent } from "@/pubsub/events/transaction";
 
 @Injectable()
 export class TransactionsService {
@@ -14,6 +16,7 @@ export class TransactionsService {
         private readonly trxRepoFactory: TransactionsRepoFactory,
         private readonly categoriesRepoFactory: CategoriesRepoFactory,
         private readonly trxRepo: TransactionsRepo,
+        private readonly events: EventBus,
     ) {}
 
     @Cron(CronExpression.EVERY_HOUR)
@@ -35,6 +38,7 @@ export class TransactionsService {
             if (trx.recurringTrxId) {
                 await trxRepo.updateDue(trx.recurringTrxId);
             }
+            this.events.publish(new TransactionUpdatedEvent(trx.id, dto.userId));
             return trx;
         });
     }

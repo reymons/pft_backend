@@ -4,6 +4,8 @@ import { CategoriesRepoFactory } from "@/categories/categories.repo";
 import { BudgetModel } from "./budgets.model";
 import { Transactor } from "@/db/db.transactor";
 import type { CreateBudgetDto, DeleteBudgetDto, EditBudgetDto } from "./dto/service";
+import { BudgetLimitApproachingEvent, BudgetUpdatedEvent } from "@/pubsub/events/budget";
+import { EventBus } from "@/pubsub/pubsub.bus";
 
 @Injectable()
 export class BudgetsService {
@@ -12,6 +14,7 @@ export class BudgetsService {
         private readonly budgetsRepoFactory: BudgetsRepoFactory,
         private readonly categoriesRepoFactory: CategoriesRepoFactory,
         private readonly transactor: Transactor,
+        private readonly events: EventBus,
     ) {}
 
     getBudgets(userId: number): Promise<BudgetModel[]> {
@@ -47,7 +50,14 @@ export class BudgetsService {
         }
     }
 
-    editBudget(dto: EditBudgetDto): Promise<BudgetModel> {
-        return this.budgetsRepo.patch(dto);
+    async editBudget(dto: EditBudgetDto): Promise<BudgetModel> {
+        const budget = await this.budgetsRepo.patch(dto);
+        this.events.publish(new BudgetUpdatedEvent(budget.id, budget.userId));
+        return budget;
+    }
+
+    async findLimitApproaching(userId: number): Promise<BudgetModel[]> {
+        const budgets = await this.budgetsRepo.getAllByUserId(userId);
+        return budgets.filter((b) => b.totalSpent / b.amount > 0.9);
     }
 }

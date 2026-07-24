@@ -7,6 +7,9 @@ import { Transactor } from "./db.transactor";
 
 const db = pgp();
 
+const JSONB_TYPE = 3802;
+db.pg.types.setTypeParser(JSONB_TYPE, (v) => v);
+
 @Global()
 @Module({
     providers: [

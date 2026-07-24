@@ -9,6 +9,9 @@ import { CategoriesModule } from "./categories/categories.module";
 import { BudgetsModule } from "./budgets/budgets.module";
 import { TransactionsModule } from "./transactions/transactions.module";
 import { StatsModule } from "./stats/stats.module";
+import { WsModule } from "./ws/ws.module";
+import { PubsubModule } from "./pubsub/pubsub.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 
 @Module({
     imports: [
@@ -18,13 +21,16 @@ import { StatsModule } from "./stats/stats.module";
         }),
         ScheduleModule.forRoot(),
         DBModule,
+        WsModule,
         JwtModule,
+        PubsubModule,
         AuthModule,
         UsersModule,
         CategoriesModule,
         BudgetsModule,
         TransactionsModule,
         StatsModule,
+        NotificationsModule,
     ],
 })
 export class AppModule {}

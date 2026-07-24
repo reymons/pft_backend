@@ -1,15 +1,19 @@
+import FastifyCookie from "@fastify/cookie";
+import FastifyCORS from "@fastify/cors";
+
 import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
-import FastifyCookie from "@fastify/cookie";
-import FastifyCORS from "@fastify/cors";
+import { WsAdapter } from "@nestjs/platform-ws";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
     const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
     const conf = app.get(ConfigService);
+
+    app.useWebSocketAdapter(new WsAdapter(app));
 
     await app.register(FastifyCORS, {
         credentials: true,
