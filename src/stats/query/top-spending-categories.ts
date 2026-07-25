@@ -9,7 +9,7 @@ export class TopSpendingCategoriesQuery {
     @IsEnum(TopSpendingCategoryPeriod)
     period = TopSpendingCategoryPeriod.Monthly;
 
-    @ApiProperty()
+    @ApiProperty({ required: false })
     @Type(() => Number)
     @IsOptional()
     @IsInt()

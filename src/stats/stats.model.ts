@@ -10,3 +10,9 @@ export class TopSpendingCategoryModel {
     category: CategoryModel;
     amount: number;
 }
+
+export class SpendingCategoryTrendModel {
+    category: CategoryModel;
+    amount: number;
+    date: string;
+}

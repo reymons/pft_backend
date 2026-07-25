@@ -6,6 +6,8 @@ import { StatsRepo } from "./stats.repo";
 import { TopSpendingCategoryRes } from "./dto/controller/top-spending-category";
 import { TopSpendingCategoriesQuery } from "./query/top-spending-categories";
 import { SummaryRes } from "./dto/controller/summary";
+import { SpendingCategoryTrendRes } from "./dto/controller/spending-category-trend";
+import { SpendingCategoryTrendQuery } from "./query/spending-category-trend";
 
 @Controller("stats")
 @Auth()
@@ -28,5 +30,12 @@ export class StatsController {
     async getSummary(@Req() req: FastifyRequest) {
         const ent = await this.statsRepo.getSummary(req.user.id);
         return new SummaryRes(ent);
+    }
+
+    @Get("spending-category-trend")
+    @ApiOkResponse({ type: SpendingCategoryTrendRes })
+    async getSpendingCategoryTred(@Req() req: FastifyRequest, @Query() query: SpendingCategoryTrendQuery) {
+        const trend = await this.statsRepo.getSpendingCategoryTrend(req.user.id, query);
+        return trend.map((t) => new SpendingCategoryTrendRes(t));
     }
 }

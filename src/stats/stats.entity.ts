@@ -13,3 +13,9 @@ export type SummaryEntity = {
     spending_this_month: number;
     spending_prev_month: number;
 };
+
+export type SpendingCategoryTrendEntity = {
+    category: CategoryEntity;
+    amount: number;
+    date: string;
+};
