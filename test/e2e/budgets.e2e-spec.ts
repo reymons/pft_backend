@@ -29,33 +29,36 @@ describe("Budgets API", () => {
 
     it("creates a budget", async () => {
         const newBudget = {
+            name: faker.string.uuid(),
             amount: parseFloat(faker.finance.amount()),
             period: "yearly",
             newCategories: ["Groceries"],
+            startsAt: faker.date.soon(),
         };
         const res = await authRequest(app, "post", "/budgets")
             .send(newBudget)
             .expect(201)
             .expect("Content-Type", /json/);
         expect(res.body).toEqual({
-            budget: {
-                id: expect.any(Number),
-                amount: newBudget.amount,
-                period: newBudget.period,
-                categoryIds: expect.any(Array),
-            },
+            id: expect.any(Number),
+            name: expect.any(String),
+            amount: newBudget.amount,
+            period: newBudget.period,
+            startsAt: expect.any(String),
+            totalSpent: expect.any(Number),
+            categories: expect.any(Array),
         });
-        const body = res.body as { budget: CreatedBudget };
-        expect(body.budget.categoryIds.every(Number.isInteger)).toBe(true);
     });
 
     it("deletes a budget", async () => {
         const budget = {
+            name: faker.string.uuid(),
             amount: parseFloat(faker.finance.amount()),
             period: "weekly",
+            startsAt: faker.date.soon(),
         };
         const res = await authRequest(app, "post", "/budgets").send(budget).expect(201);
-        const body = res.body as { budget: CreatedBudget };
-        await authRequest(app, "delete", `/budgets/${body.budget.id}`).send().expect(204);
+        const newBudget = res.body as CreatedBudget;
+        await authRequest(app, "delete", `/budgets/${newBudget.id}`).send().expect(204);
     });
 });
