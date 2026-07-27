@@ -1,4 +1,5 @@
 import { BudgetPeriod } from "@/budgets/budgets.model";
+import { Currency } from "@/currency/currency.model";
 
 export type CreateBudgetDto = {
     userId: number;
@@ -8,6 +9,7 @@ export type CreateBudgetDto = {
     startsAt: string;
     categoryIds?: number[];
     newCategories?: string[];
+    currency: Currency;
 };
 
 export type DeleteBudgetDto = {

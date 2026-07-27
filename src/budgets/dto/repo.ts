@@ -1,3 +1,4 @@
+import { Currency } from "@/currency/currency.model";
 import { BudgetPeriod } from "../budgets.model";
 
 export type SaveBudgetDto = {
@@ -7,6 +8,7 @@ export type SaveBudgetDto = {
     period: BudgetPeriod;
     startsAt: string;
     categoryIds?: number[];
+    currency: Currency;
 };
 
 export type PatchBudgetDto = Partial<Omit<SaveBudgetDto, "userId">> & {

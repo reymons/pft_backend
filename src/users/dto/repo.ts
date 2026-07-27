@@ -1,9 +1,7 @@
 import { Currency } from "@/currency/currency.model";
 
-export class UserModel {
-    id: number;
+export type SaveUserDto = {
     name: string;
     password: string;
-    createdAt: string;
     defaultCurrency: Currency;
-}
+};

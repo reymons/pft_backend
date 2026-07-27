@@ -19,17 +19,48 @@ export class StatsRepo {
     }
 
     private static getTopSpendingCategoriesSQL = (q: TopSpendingCategoriesQuery) => `
-        SELECT c.id, c.type, c.custom_name, sum(t.amount)::int AS amount
+        WITH user_currency AS (
+            SELECT default_currency AS value
+            FROM users WHERE id = $(userId)
+        ),
+        trx_usd_amounts AS (
+            SELECT t.id, t.category_id, t.added_at, t.amount * (1 / er.usd_rate) AS amount
+            FROM transactions t
+            JOIN exchange_rates er ON t.currency = er.currency AND (t.added_at AT TIME ZONE 'UTC')::date = er.rate_date
+            WHERE t.user_id = $(userId) AND t.type = 'expense' AND t.added_at >= NOW() - INTERVAL '${StatsRepo.periodToInterval[q.period]}'
+        ),
+        trx_converted AS (
+            SELECT tua.category_id, tua.amount * er.usd_rate AS amount
+            FROM trx_usd_amounts AS tua
+            CROSS JOIN user_currency
+            JOIN exchange_rates er ON (tua.added_at AT TIME ZONE 'UTC')::date = er.rate_date AND er.currency = user_currency.value
+        )
+        SELECT c.id, c.type, c.custom_name, sum(tc.amount)::float AS amount
         FROM categories AS c
-        JOIN transactions AS t ON c.id = t.category_id
-        WHERE t.user_id = $(userId) AND t.type = 'expense' AND t.added_at >= NOW() - INTERVAL '${StatsRepo.periodToInterval[q.period]}'
+        JOIN trx_converted AS tc ON c.id = tc.category_id
         GROUP BY c.id
         ORDER BY c.id DESC
         ${StatsRepo.limitClause(q.limit)}
     `;
 
     private static getSummarySQL = `
-        WITH trx_summary AS (
+        WITH user_currency AS (
+            SELECT default_currency AS value
+            FROM users WHERE id = $(userId)
+        ),
+        trx_usd_amounts AS (
+            SELECT t.added_at, t.type, t.amount * (1 / er.usd_rate) AS amount
+            FROM transactions t
+            JOIN exchange_rates er ON t.currency = er.currency AND (t.added_at AT TIME ZONE 'UTC')::date = er.rate_date
+            WHERE t.user_id = $(userId)
+        ),
+        trx_converted AS (
+            SELECT tua.added_at, tua.type, tua.amount * er.usd_rate AS amount
+            FROM trx_usd_amounts AS tua
+            CROSS JOIN user_currency
+            JOIN exchange_rates er ON (tua.added_at AT TIME ZONE 'UTC')::date = er.rate_date AND er.currency = user_currency.value
+        ),
+        trx_summary AS (
             SELECT
                 count(*)::int AS transactions,
                 count(*) FILTER (
@@ -62,7 +93,7 @@ export class StatsRepo {
                     ),
                     0
                 )::float AS spending_prev_month
-            FROM transactions WHERE user_id = $(userId)
+            FROM trx_converted
         ),
         budgets_summary AS (
             SELECT count(*)::int AS budgets
@@ -72,15 +103,27 @@ export class StatsRepo {
     `;
 
     private static getSpendingCategoryTrendSQL = (q: SpendingCategoryTrendQuery) => `
-        WITH top AS (
-            SELECT category_id, sum(amount)::float AS amount
-            FROM transactions
-            WHERE type = 'expense' AND user_id = $(userId)
+        WITH user_currency AS (
+            SELECT default_currency AS value
+            FROM users WHERE id = $(userId)
+        ),
+        trx_usd_amounts AS (
+            SELECT t.id, t.category_id, t.added_at, t.amount * (1 / er.usd_rate) AS amount
+            FROM transactions t
+            JOIN exchange_rates er ON t.currency = er.currency AND (t.added_at AT TIME ZONE 'UTC')::date = er.rate_date
+            WHERE t.user_id = $(userId)
+                AND t.type = 'expense'
                 AND added_at >= date_trunc('day', $(startDate)::date)
                 AND added_at < date_trunc('day', $(endDate)::date + INTERVAL '1 day')
-            GROUP BY category_id
             ORDER BY amount DESC
             ${StatsRepo.limitClause(q.limit)}
+        ),
+        trx_converted AS (
+            SELECT tua.id, tua.category_id, tua.added_at, sum(tua.amount * er.usd_rate) AS amount
+            FROM trx_usd_amounts AS tua
+            CROSS JOIN user_currency
+            JOIN exchange_rates er ON (tua.added_at AT TIME ZONE 'UTC')::date = er.rate_date AND er.currency = user_currency.value
+            GROUP BY tua.id, tua.category_id, tua.added_at
         )
         SELECT
             date_trunc('day', t.added_at) AS date,
@@ -90,12 +133,8 @@ export class StatsRepo {
                 'type', c.type,
                 'custom_name', c.custom_name
             ) AS category
-        FROM transactions t
-        JOIN categories c ON t.category_id = c.id
-        JOIN top ON c.id = top.category_id
-        WHERE t.type = 'expense' AND t.user_id = $(userId)
-            AND t.added_at >= date_trunc('day', $(startDate)::date)
-            AND t.added_at < date_trunc('day', $(endDate)::date + INTERVAL '1 day')
+        FROM categories c
+        JOIN trx_converted t ON c.id = t.category_id
         GROUP BY c.id, date
         ORDER BY date;
     `;

@@ -4,10 +4,11 @@ import { TransactionsRepo, TransactionsRepoFactory } from "./transactions.repo";
 import { CategoriesModule } from "@/categories/categories.module";
 import { TransactionsController } from "./transactions.controller";
 import { PubsubModule } from "@/pubsub/pubsub.module";
+import { CurrencyModule } from "@/currency/currency.module";
 
 @Module({
     providers: [TransactionsService, TransactionsRepoFactory, TransactionsRepo],
-    imports: [CategoriesModule, PubsubModule],
+    imports: [CategoriesModule, PubsubModule, CurrencyModule],
     controllers: [TransactionsController],
 })
 export class TransactionsModule {}

@@ -1,4 +1,5 @@
 import { CategoryModel } from "@/categories/categories.model";
+import { Currency } from "@/currency/currency.model";
 
 export enum RecurringTrxPeriod {
     Weekly = "weekly",
@@ -27,6 +28,7 @@ export class TransactionModel {
     recurringTrxId: number | null;
     addedAt: string;
     createdAt: string;
+    currency: Currency;
     category: CategoryModel;
 
     get isRecurring() {

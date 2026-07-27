@@ -49,6 +49,7 @@ export class NotificationsRepo {
     }
 
     async saveMany(userId: number, events: Event[]): Promise<NotificationEvent[]> {
+        if (!events.length) return [];
         const data = events.map((ev) => ({
             user_id: userId,
             data: JSON.stringify({ type: ev.type, data: ev }),

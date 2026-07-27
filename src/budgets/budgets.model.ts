@@ -1,4 +1,5 @@
 import { CategoryModel } from "@/categories/categories.model";
+import { Currency } from "@/currency/currency.model";
 
 export enum BudgetPeriod {
     Weekly = "weekly",
@@ -15,4 +16,5 @@ export class BudgetModel {
     totalSpent: number;
     categories: CategoryModel[];
     startsAt: string;
+    currency: Currency;
 }

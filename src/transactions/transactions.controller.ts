@@ -26,6 +26,7 @@ export class TransactionsController {
             userId: req.user.id,
             categoryId: body.categoryId,
             addedAt: body.addedAt,
+            currency: body.currency,
         });
         return new TrxRes(trx);
     }

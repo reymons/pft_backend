@@ -15,7 +15,11 @@ export class AuthService {
 
     async signUp(dto: SignUpDto): Promise<UserModel> {
         const hashedPassword = await this.passwordService.createHash(dto.password, this.HASH_LEN);
-        return this.usersRepo.save(dto.name, hashedPassword);
+        return this.usersRepo.save({
+            name: dto.name,
+            password: hashedPassword,
+            defaultCurrency: dto.defaultCurrency,
+        });
     }
 
     async signIn(dto: SignInDto): Promise<UserModel> {

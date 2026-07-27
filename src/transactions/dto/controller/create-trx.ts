@@ -1,3 +1,4 @@
+import { Currency } from "@/currency/currency.model";
 import { RecurringTrxPeriod, TransactionType } from "@/transactions/transactions.model";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsDateString, IsEnum, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from "class-validator";
@@ -38,4 +39,8 @@ export class CreateTrxReq {
     @ApiProperty()
     @IsDateString()
     addedAt: string;
+
+    @ApiProperty({ enum: Currency })
+    @IsEnum(Currency)
+    currency: Currency;
 }

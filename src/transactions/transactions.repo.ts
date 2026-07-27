@@ -43,7 +43,7 @@ export class TransactionsRepo {
         after?: string;
     }) => `
         SELECT
-            t.id, t.type, t.name, t.amount, t.description, t.category_id, t.added_at, t.created_at, t.recurring_trx_id,
+            t.id, t.type, t.name, t.amount, t.description, t.category_id, t.added_at, t.created_at, t.recurring_trx_id, t.currency,
             json_build_object(
                 'id', cat.id,
                 'user_id', cat.user_id,
@@ -56,32 +56,32 @@ export class TransactionsRepo {
     `;
 
     private static readonly insertTransactionSQL = `
-        INSERT INTO transactions(type, name, description, amount, user_id, category_id, added_at, recurring_trx_id)
-        VALUES ($(type), $(name), $(description), $(amount), $(userId), $(categoryId), $(addedAt), $(recurringTrxId))
+        INSERT INTO transactions(type, name, description, amount, user_id, category_id, added_at, recurring_trx_id, currency)
+        VALUES ($(type), $(name), $(description), $(amount), $(userId), $(categoryId), $(addedAt), $(recurringTrxId), $(currency))
         RETURNING id
     `;
 
     private static readonly insertRecurringTransactionSQL = `
-        INSERT INTO recurring_transactions(type, name, description, amount, user_id, category_id, updates_at, update_interval)
-        VALUES ($(type), $(name), $(description), $(amount), $(userId), $(categoryId), $(period)::interval + $(addedAt)::timestamptz, $(period))
+        INSERT INTO recurring_transactions(type, name, description, amount, user_id, category_id, updates_at, update_interval, currency)
+        VALUES ($(type), $(name), $(description), $(amount), $(userId), $(categoryId), $(period)::interval + $(addedAt)::timestamptz, $(period), $(currency))
         RETURNING id
     `;
 
     private static readonly updateRecurringTrxSQL = (recurringTrxId?: number) => `
         WITH RECURSIVE due AS (
-            SELECT id, type, name, description, category_id, user_id, amount, updates_at, update_interval
+            SELECT id, type, name, description, category_id, user_id, amount, updates_at, update_interval, currency
             FROM recurring_transactions
             WHERE updates_at <= NOW() ${recurringTrxId ? " AND id = $(id)" : ""}
 
             UNION ALL
 
-            SELECT id, type, name, description, category_id, user_id, amount, updates_at + update_interval, update_interval
+            SELECT id, type, name, description, category_id, user_id, amount, updates_at + update_interval, update_interval, currency
             FROM due
             WHERE updates_at + update_interval <= NOW()
         ),
         inserted AS (
-            INSERT INTO transactions(type, name, description, category_id, user_id, recurring_trx_id, amount, added_at)
-                SELECT type, name, description, category_id, user_id, id, amount, updates_at
+            INSERT INTO transactions(type, name, description, category_id, user_id, recurring_trx_id, amount, added_at, currency)
+                SELECT type, name, description, category_id, user_id, id, amount, updates_at, currency
                 FROM due
             RETURNING recurring_trx_id
         )
@@ -111,6 +111,7 @@ export class TransactionsRepo {
         m.amount = parseFloat(ent.amount);
         m.category = CategoriesRepo.toModel(ent.category);
         m.recurringTrxId = ent.recurring_trx_id;
+        m.currency = ent.currency;
         return m;
     }
 
@@ -135,6 +136,7 @@ export class TransactionsRepo {
                     categoryId: dto.categoryId,
                     addedAt: dto.addedAt,
                     period: TransactionsRepo.sqlPeriod[dto.recurringPeriod],
+                    currency: dto.currency,
                 });
                 recurringTrxId = row.id;
             }
@@ -146,6 +148,7 @@ export class TransactionsRepo {
                 userId: dto.userId,
                 categoryId: dto.categoryId,
                 addedAt: dto.addedAt,
+                currency: dto.currency,
                 recurringTrxId,
             });
             return this.getOne(t, ent.id, dto.userId);

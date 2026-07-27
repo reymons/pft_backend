@@ -12,6 +12,8 @@ import { StatsModule } from "./stats/stats.module";
 import { WsModule } from "./ws/ws.module";
 import { PubsubModule } from "./pubsub/pubsub.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { CurrencyModule } from "./currency/currency.module";
+import { HttpModule } from "./http/http.module";
 
 @Module({
     imports: [
@@ -31,6 +33,8 @@ import { NotificationsModule } from "./notifications/notifications.module";
         TransactionsModule,
         StatsModule,
         NotificationsModule,
+        CurrencyModule,
+        HttpModule,
     ],
 })
 export class AppModule {}

@@ -13,6 +13,7 @@ import {
     MinLength,
 } from "class-validator";
 import { BudgetPeriod } from "@/budgets/budgets.model";
+import { Currency } from "@/currency/currency.model";
 
 export class CreateBudgetReq {
     @ApiProperty()
@@ -45,4 +46,8 @@ export class CreateBudgetReq {
     @IsString({ each: true })
     @IsOptional()
     newCategories?: string[];
+
+    @ApiProperty({ enum: Currency })
+    @IsEnum(Currency)
+    currency: Currency;
 }

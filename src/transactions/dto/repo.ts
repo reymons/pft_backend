@@ -1,3 +1,4 @@
+import { Currency } from "@/currency/currency.model";
 import { RecurringTrxPeriod, TransactionType } from "../transactions.model";
 
 export type SaveTrxDto = {
@@ -9,4 +10,5 @@ export type SaveTrxDto = {
     userId: number;
     addedAt: string;
     recurringPeriod?: RecurringTrxPeriod;
+    currency: Currency;
 };

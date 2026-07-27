@@ -22,22 +22,42 @@ export class BudgetsRepo {
             SELECT
                 id AS budget_id,
                 period,
+                currency,
                 CASE
                     WHEN starts_at > now() THEN starts_at
                     ELSE starts_at + floor(extract(epoch FROM (now() - starts_at)) / extract(epoch FROM period)) * period
                 END AS period_start
             FROM budgets
+            WHERE ${many ? "" : "id = $(budgetId) AND"} user_id = $(userId)
+        ),
+        trx_usd_amounts AS (
+            SELECT
+                bpw.budget_id,
+                er.rate_date,
+                bpw.currency AS budget_currency,
+                coalesce(t.amount * (1 / er.usd_rate), 0) AS amount
+            FROM budget_period_windows bpw
+            LEFT JOIN budget_categories bc ON bpw.budget_id = bc.budget_id
+            LEFT JOIN transactions t ON
+                t.user_id = $(userId) AND
+                t.type = 'expense' AND
+                t.added_at >= bpw.period_start AND
+                t.added_at < bpw.period_start + bpw.period AND
+                (t.category_id = bc.category_id OR bc.category_id IS NULL)
+            LEFT JOIN exchange_rates er ON t.currency = er.currency AND (t.added_at AT TIME ZONE 'UTC')::date = er.rate_date
+            WHERE t.user_id = $(userId)
+        ),
+        trx_converted_amounts AS (
+            SELECT
+                tua.budget_id,
+                coalesce(tua.amount * er.usd_rate, 0) AS amount
+            FROM trx_usd_amounts tua
+            LEFT JOIN exchange_rates er ON tua.rate_date = er.rate_date AND er.currency = tua.budget_currency
         ),
         budget_total_spent AS (
-            SELECT bpw.budget_id, coalesce(sum(t.amount), 0)::float as total_spent
-            FROM budget_period_windows AS bpw
-            LEFT JOIN budget_categories AS bc ON bc.budget_id = bpw.budget_id
-            LEFT JOIN transactions AS t ON
-                t.type = 'expense' AND
-                (t.category_id = bc.category_id OR bc.category_id IS NULL) AND
-                t.added_at >= bpw.period_start AND
-                t.added_at < bpw.period_start + bpw.period
-            GROUP BY bpw.budget_id
+            SELECT budget_id, sum(amount) AS amount
+            FROM trx_converted_amounts
+            GROUP BY budget_id
         )
         SELECT
             b.id,
@@ -46,7 +66,8 @@ export class BudgetsRepo {
             b.amount,
             b.period,
             b.starts_at,
-            bts.total_spent AS total_spent,
+            b.currency,
+            bts.amount::float AS total_spent,
             coalesce(
                 json_agg(
                     json_build_object(
@@ -63,7 +84,7 @@ export class BudgetsRepo {
         LEFT JOIN budget_categories AS bc ON b.id = bc.budget_id
         LEFT JOIN categories AS c ON bc.category_id = c.id
         WHERE ${many ? "" : "b.id = $(budgetId) AND"} b.user_id = $(userId)
-        GROUP BY b.id, bts.total_spent
+        GROUP BY b.id, bts.amount
     `;
 
     private static readonly insertCategoriesSQL = `
@@ -106,6 +127,7 @@ export class BudgetsRepo {
         m.totalSpent = ent.total_spent;
         m.startsAt = ent.starts_at;
         m.categories = ent.categories.map((ent) => CategoriesRepo.toModel(ent));
+        m.currency = ent.currency;
         return m;
     }
 
@@ -122,8 +144,8 @@ export class BudgetsRepo {
     async save(dto: SaveBudgetDto): Promise<BudgetModel> {
         return this.db.tx<BudgetModel>(async (t) => {
             const { id: budgetId } = await this.db.one<{ id: number }>(
-                "INSERT INTO budgets(user_id, name, amount, period, starts_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-                [dto.userId, dto.name, dto.amount, BudgetsRepo.sqlPeriod[dto.period], dto.startsAt],
+                "INSERT INTO budgets(user_id, name, amount, period, starts_at, currency) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+                [dto.userId, dto.name, dto.amount, BudgetsRepo.sqlPeriod[dto.period], dto.startsAt, dto.currency],
             );
             if (dto.categoryIds?.length) {
                 const data = dto.categoryIds.map((id) => ({ budget_id: budgetId, category_id: id }));
@@ -137,7 +159,7 @@ export class BudgetsRepo {
 
     async exists(budgetId: number, userId: number): Promise<boolean> {
         const result = await this.db.one<{ count: number }>(
-            "SELECT count(*) FROM budgets WHERE id = $1 AND user_id = $2 LIMIT 1",
+            "SELECT count(*)::int FROM budgets WHERE id = $1 AND user_id = $2 LIMIT 1",
             [budgetId, userId],
         );
         return result.count > 0;
@@ -165,6 +187,10 @@ export class BudgetsRepo {
         if (dto.startsAt) {
             cond.push("starts_at = $(startsAt)");
             values.startsAt = dto.startsAt;
+        }
+        if (dto.currency) {
+            cond.push("currency = $(currency)");
+            values.currency = dto.currency;
         }
         return { sql: cond.join(","), values };
     }

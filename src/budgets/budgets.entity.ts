@@ -1,4 +1,5 @@
 import { CategoryEntity } from "@/categories/categories.entity";
+import { Currency } from "@/currency/currency.model";
 import { PostgresInterval } from "@/db/db.types";
 
 export type BudgetEntity = {
@@ -9,6 +10,7 @@ export type BudgetEntity = {
     spent: number;
     period: PostgresInterval;
     starts_at: string;
+    currency: Currency;
 };
 
 export type BudgetWithCategoriesEntity = BudgetEntity & {

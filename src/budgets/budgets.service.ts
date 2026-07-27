@@ -4,8 +4,9 @@ import { CategoriesRepoFactory } from "@/categories/categories.repo";
 import { BudgetModel } from "./budgets.model";
 import { Transactor } from "@/db/db.transactor";
 import type { CreateBudgetDto, DeleteBudgetDto, EditBudgetDto } from "./dto/service";
-import { BudgetLimitApproachingEvent, BudgetUpdatedEvent } from "@/pubsub/events/budget";
+import { BudgetUpdatedEvent } from "@/pubsub/events/budget";
 import { EventBus } from "@/pubsub/pubsub.bus";
+import { CurrencyService } from "@/currency/currency.service";
 
 @Injectable()
 export class BudgetsService {
@@ -13,6 +14,7 @@ export class BudgetsService {
         private readonly budgetsRepo: BudgetsRepo,
         private readonly budgetsRepoFactory: BudgetsRepoFactory,
         private readonly categoriesRepoFactory: CategoriesRepoFactory,
+        private readonly currencyService: CurrencyService,
         private readonly transactor: Transactor,
         private readonly events: EventBus,
     ) {}
@@ -21,7 +23,9 @@ export class BudgetsService {
         return this.budgetsRepo.getAllByUserId(userId);
     }
 
-    createBudget(dto: CreateBudgetDto): Promise<BudgetModel> {
+    async createBudget(dto: CreateBudgetDto): Promise<BudgetModel> {
+        await this.currencyService.ensureExchangeRatesExist(dto.startsAt);
+
         return this.transactor.run(async (t) => {
             const budgetsRepo = this.budgetsRepoFactory.createRepo(t);
             const categoriesRepo = this.categoriesRepoFactory.createRepo(t);
@@ -37,6 +41,7 @@ export class BudgetsService {
                 period: dto.period,
                 startsAt: dto.startsAt,
                 categoryIds,
+                currency: dto.currency,
             });
         });
     }
@@ -51,6 +56,9 @@ export class BudgetsService {
     }
 
     async editBudget(dto: EditBudgetDto): Promise<BudgetModel> {
+        if (dto.startsAt) {
+            await this.currencyService.ensureExchangeRatesExist(dto.startsAt);
+        }
         const budget = await this.budgetsRepo.patch(dto);
         this.events.publish(new BudgetUpdatedEvent(budget.id, budget.userId));
         return budget;

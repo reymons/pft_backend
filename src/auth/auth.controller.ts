@@ -29,6 +29,7 @@ export class AuthController {
         const user = await this.authService.signUp({
             name: body.name,
             password: body.password,
+            defaultCurrency: body.defaultCurrency,
         });
         const token = await this.jwtService.createAccessToken(user.id);
         return new SignUpRes(token, this.jwtService.TOKEN_TTL, user);

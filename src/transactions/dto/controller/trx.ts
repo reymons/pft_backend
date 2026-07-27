@@ -1,6 +1,7 @@
 import { CategoryRes } from "@/categories/dto/controller/category";
 import { ApiProperty } from "@nestjs/swagger";
 import { RecurringTrxPeriod, TransactionModel, TransactionType } from "@/transactions/transactions.model";
+import { Currency } from "@/currency/currency.model";
 
 export class TrxRes {
     @ApiProperty()
@@ -30,6 +31,9 @@ export class TrxRes {
     @ApiProperty()
     createdAt: string;
 
+    @ApiProperty({ enum: Currency })
+    currency: Currency;
+
     constructor(trx: TransactionModel) {
         this.id = trx.id;
         this.type = trx.type;
@@ -40,5 +44,6 @@ export class TrxRes {
         this.recurringPeriod = trx.recurringPeriod;
         this.addedAt = trx.addedAt;
         this.createdAt = trx.createdAt;
+        this.currency = trx.currency;
     }
 }

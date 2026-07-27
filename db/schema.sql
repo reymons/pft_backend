@@ -1,9 +1,15 @@
 CREATE EXTENSION pg_trgm;
 
+CREATE TYPE currency_code AS ENUM (
+    'USD', 'EUR', 'GBP', 'RSD', 'CHF', 'CAD', 'AUD', 'JPY', 'CNY', 
+    'INR', 'PLN', 'CZK', 'HUF', 'RON', 'SEK', 'NOK', 'DKK', 'TRY'
+);
+
 CREATE TABLE users (
     id serial,
     name varchar(50) NOT NULL,
     password varchar(512) NOT NULL,
+    default_currency currency_code NOT NULL,
     created_at timestamptz NOT NULL DEFAULT NOW(),
 
     PRIMARY KEY (id)
@@ -23,12 +29,22 @@ CREATE TABLE categories (
 
 INSERT INTO categories(type) VALUES ('groceries', 'furniture', 'sports', 'food');
 
+CREATE TABLE exchange_rates (
+    currency currency_code NOT NULL,
+    usd_rate numeric(18, 8) NOT NULL,
+    rate_date date NOT NULL,
+
+    PRIMARY KEY (currency, rate_date),
+    CHECK (usd_rate > 0)
+);
+
 CREATE TABLE budgets (
     id serial,
     user_id integer NOT NULL,
     name varchar(50) NOT NULL,
     amount numeric(12, 2) NOT NULL,
     period interval NOT NULL,
+    currency currency_code NOT NULL,
     starts_at timestamptz NOT NULL,
 
     PRIMARY KEY (id),
@@ -54,6 +70,7 @@ CREATE TABLE recurring_transactions (
     amount numeric(12, 2) NOT NULL,
     category_id integer NOT NULL,
     description varchar(100),
+    currency currency_code NOT NULL,
     update_interval interval NOT NULL,
     updates_at timestamptz NOT NULL,
 
@@ -71,6 +88,7 @@ CREATE TABLE transactions (
     category_id integer NOT NULL,
     recurring_trx_id integer,
     description varchar(100),
+    currency currency_code NOT NULL,
     added_at timestamptz NOT NULL,
     created_at timestamptz NOT NULL DEFAULT NOW(),
 
@@ -90,3 +108,4 @@ CREATE TABLE notifications (
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+

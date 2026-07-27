@@ -43,6 +43,7 @@ export class BudgetsController {
             startsAt: body.startsAt,
             categoryIds: body.categoryIds,
             newCategories: body.newCategories,
+            currency: body.currency,
         });
         return new BudgetRes(budget);
     }
