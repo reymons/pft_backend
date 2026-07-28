@@ -1,5 +1,17 @@
 import { type FastifyRequest } from "fastify";
-import { Body, Controller, Get, Post, Query, Req } from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    ParseIntPipe,
+    Post,
+    Query,
+    Req,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import { Auth } from "@/auth/auth.guard";
 import { TrxRes } from "./dto/controller/trx";
@@ -36,5 +48,11 @@ export class TransactionsController {
     async getAll(@Query() query: TransactionsQuery, @Req() req: FastifyRequest): Promise<GetAllTrxRes> {
         const data = await this.trxService.getTransactions(req.user.id, query);
         return new GetAllTrxRes(data.data, data.total);
+    }
+
+    @Delete(":id")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async deleteOne(@Param("id", ParseIntPipe) id: number, @Req() req: FastifyRequest) {
+        await this.trxService.deleteTransaction(id, req.user.id);
     }
 }

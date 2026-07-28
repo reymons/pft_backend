@@ -69,6 +69,7 @@ CREATE TABLE recurring_transactions (
     name varchar(50) NOT NULL,
     amount numeric(12, 2) NOT NULL,
     category_id integer NOT NULL,
+    original_trx_id integer NOT NULL,
     description varchar(100),
     currency currency_code NOT NULL,
     update_interval interval NOT NULL,
@@ -76,7 +77,8 @@ CREATE TABLE recurring_transactions (
 
     PRIMARY KEY (id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES categories(id)
+    FOREIGN KEY (category_id) REFERENCES categories(id),
+    FOREIGN KEY (original_trx_id) REFERENCES transactions(id) ON DELETE CASCADE
 );
 
 CREATE TABLE transactions (

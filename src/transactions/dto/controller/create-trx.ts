@@ -16,7 +16,7 @@ export class CreateTrxReq {
     @ApiProperty()
     @IsOptional()
     @IsString()
-    @Length(1, 50)
+    @Length(0, 50)
     description?: string;
 
     @ApiProperty()

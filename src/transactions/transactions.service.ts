@@ -56,4 +56,8 @@ export class TransactionsService {
     ): Promise<{ data: TransactionModel[]; total: number }> {
         return this.trxRepo.getAllByUserId(userId, query);
     }
+
+    async deleteTransaction(id: number, userId: number) {
+        await this.trxRepo.deleteOne(id, userId);
+    }
 }

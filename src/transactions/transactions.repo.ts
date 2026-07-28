@@ -6,7 +6,6 @@ import { SaveTrxDto } from "./dto/repo";
 import { TransactionSortField, TransactionsQuery } from "./query/trx";
 import { CategoriesRepo } from "@/categories/categories.repo";
 import { EntityWithId } from "@/common/entity";
-import { PostgresInterval } from "@/db/db.types";
 
 @Injectable()
 export class TransactionsRepoFactory {
@@ -22,19 +21,6 @@ export class TransactionsRepo {
         [RecurringTrxPeriod.Monthly]: "1 month",
         [RecurringTrxPeriod.Yearly]: "1 year",
     };
-
-    private sqlPeriodToModelPeriod(p: PostgresInterval): RecurringTrxPeriod {
-        if (p.days && p.days === 7) {
-            return RecurringTrxPeriod.Weekly;
-        }
-        if (p.months && p.months === 1) {
-            return RecurringTrxPeriod.Monthly;
-        }
-        if (p.years && p.years === 1) {
-            return RecurringTrxPeriod.Yearly;
-        }
-        throw new Error("Unknown recurring transaction period");
-    }
 
     private static readonly getTransactionSQL = (opts: {
         many?: boolean;
@@ -151,6 +137,12 @@ export class TransactionsRepo {
                 currency: dto.currency,
                 recurringTrxId,
             });
+            if (recurringTrxId) {
+                await t.none("UPDATE recurring_transactions SET original_trx_id = $1 WHERE id = $2", [
+                    ent.id,
+                    recurringTrxId,
+                ]);
+            }
             return this.getOne(t, ent.id, dto.userId);
         });
     }
@@ -209,5 +201,9 @@ export class TransactionsRepo {
 
     async updateDue(recurringTrxId?: number): Promise<void> {
         await this.db.none(TransactionsRepo.updateRecurringTrxSQL(recurringTrxId), { id: recurringTrxId });
+    }
+
+    async deleteOne(id: number, userId: number): Promise<void> {
+        await this.db.none("DELETE FROM transactions WHERE id = $1 AND user_id = $2", [id, userId]);
     }
 }
